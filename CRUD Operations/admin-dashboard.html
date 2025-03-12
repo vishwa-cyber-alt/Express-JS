@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display User Info</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <form action="/add" method="POST">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" class="form-control username" style="width: auto;" required>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control password" style="width: auto;" required>
+            <button type="submit" id="save" class="save btn btn-primary mt-4">Save</button>
+            <button type="button" id="update" class="update btn btn-secondary mt-4" style="display:none;">Update</button>
+            <button type="reset" class="reset btn btn-primary mt-4">Reset</button>
+        </form>
+        <div class="row mt-5">
+            <div class="col-3">
+                <div class="card text-white bg-primary mb-3" style="max-width: 18rem;">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Total Users</h5>
+                        <p class="card-text" id="Countusername"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="card text-white bg-primary mb-3" style="max-width: 18rem;">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Total Admins</h5>
+                        <p class="card-text" id="CountAdmins"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="getusers"></div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        var Learn = function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('userId');
+            const username = urlParams.get('username');
+            const password = urlParams.get('password');
+            $("#userId").text(userId);
+            $("#username").text(username);
+            $("#password").text(password);
+
+            var events = function () {
+                $("#logoutbtn").click(function () {
+                    window.location.href = 'content.html';
+                });
+                $("#update").click(function () {
+                    var userId = $('#update').data('userId');
+                    var username = $('#username').val();
+                    var password = $('#password').val();
+                    $.ajax({
+                        url: "/update/" + userId,
+                        type: "PUT",
+                        data: { username, password },
+                        success: function (response) {
+                            alert("User updated successfully!");
+                            console.log(response.username);
+                            console.log(response.password);
+                            GetUsers();
+                        },
+                        error: function (err) {
+                            console.log(err);
+                        }
+                    });
+                });
+                $(".reset").click(function () {
+                    $('#username').val('');
+                    $('#password').val('');
+                });
+            };
+
+            var GetUsers = function () {
+                var Countusername = 0;
+                var CountAdmins = 0;
+                $.ajax({
+                    url: "/list",
+                    type: "GET",
+                    success: function (response) {
+                        var htm = `
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        `;
+                        $.each(response, function (index, data) {
+                            if (data.username) { Countusername++; }
+                            if (data.username === 'admin') { CountAdmins++; }
+                            htm += `
+                            <tr>
+                                <td>${data.userId}</td>
+                                <td>${data.username}</td>
+                                <td>${data.password}</td>
+                                <td><button class="btn btn-danger" onclick="Learn.EditModal(${data.userId})">Edit</button></td>
+                                <td><button class="btn btn-danger" onclick="Learn.DeleteModal(${data.userId})">Delete</button></td>
+                            </tr>
+                            `;
+                        });
+                        htm += `
+                            </tbody>
+                        </table>
+                        `;
+                        $('#getusers').html(htm);
+                        $('#Countusername').html(Countusername);
+                        $('#CountAdmins').html(CountAdmins);
+                    },
+                    error: function (err) {
+                        console.log(err);
+                    }
+                });
+            };
+
+            var EditModal = function (userId) {
+                $.ajax({
+                    url: "/edit/" + userId,
+                    type: "GET",
+                    success: function (response) {
+                        $('#username').val(response.username);
+                        $('#password').val(response.password);
+                        $("#save").hide();
+                        $("#update").show();
+                        $('#update').data('userId', userId);
+                    },
+                    error: function (err) {
+                        console.log(err);
+                    }
+                });
+            };
+
+            var DeleteModal = function (userId) {
+                $.ajax({
+                    url: "/delete/" + userId,
+                    type: "DELETE",
+                    success: function (response) {
+                        GetUsers();
+                        alert("deleted");
+                    },
+                    error: function (err) {
+                        console.log(err);
+                    }
+                });
+            };
+
+            return {
+                init: function () {
+                    events();
+                    GetUsers();
+                },
+                EditModal: EditModal,
+                DeleteModal: DeleteModal,
+            };
+        }();
+
+        $(document).ready(function () {
+            Learn.init();
+        });
+    </script>
+</body>
+</html>
